@@ -79,6 +79,8 @@ struct RtpDecoder {
   RtpOnPacket on_packet;
   int (*decode_func)(RtpDecoder* rtp_decoder, uint8_t* data, size_t size);
   void* user_data;
+  uint8_t* nalu_buf;
+  int nalu_offset;
 };
 
 struct RtpEncoder {
@@ -100,6 +102,8 @@ void rtp_encoder_init(RtpEncoder* rtp_encoder, MediaCodec codec, RtpOnPacket on_
 int rtp_encoder_encode(RtpEncoder* rtp_encoder, const uint8_t* data, size_t size);
 
 void rtp_decoder_init(RtpDecoder* rtp_decoder, MediaCodec codec, RtpOnPacket on_packet, void* user_data);
+
+void rtp_decoder_deinit(RtpDecoder* rtp_decoder);
 
 int rtp_decoder_decode(RtpDecoder* rtp_decoder, const uint8_t* data, size_t size);
 

@@ -192,6 +192,8 @@ void peer_connection_destroy(PeerConnection* pc) {
     sctp_destroy_association(&pc->sctp);
     dtls_srtp_deinit(&pc->dtls_srtp);
     agent_destroy(&pc->agent);
+    rtp_decoder_deinit(&pc->artp_decoder);
+    rtp_decoder_deinit(&pc->vrtp_decoder);
     free(pc);
     pc = NULL;
   }

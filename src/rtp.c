@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "address.h"
@@ -291,19 +292,19 @@ static int rtp_decode_h264_fu_a(RtpDecoder* rtp_decoder,
 }
 
 static int rtp_decode_h264(RtpDecoder* rtp_decoder, uint8_t* buf, size_t size) {
-  static uint8_t nalu_buf[CONFIG_MAX_NALU_SIZE];
-  static int offset = 0;
+  uint8_t* nalu_buf = rtp_decoder->nalu_buf;
+  int* offset = &rtp_decoder->nalu_offset;
   RtpPacket* rtp_packet = (RtpPacket*)buf;
   uint8_t nalu_type = *rtp_packet->payload & 0x1f;
   int payload_size = size - sizeof(RtpHeader);
 
   switch (nalu_type) {
     case STAP_A:
-      return rtp_decode_h264_stap_a(rtp_decoder, rtp_packet->payload + 1, payload_size - 1, nalu_buf, &offset);
+      return rtp_decode_h264_stap_a(rtp_decoder, rtp_packet->payload + 1, payload_size - 1, nalu_buf, offset);
     case FU_A:
-      return rtp_decode_h264_fu_a(rtp_decoder, rtp_packet->payload, payload_size, nalu_buf, &offset);
+      return rtp_decode_h264_fu_a(rtp_decoder, rtp_packet->payload, payload_size, nalu_buf, offset);
     default:
-      return rtp_decode_h264_single(rtp_decoder, rtp_packet->payload, payload_size, nalu_buf, &offset);
+      return rtp_decode_h264_single(rtp_decoder, rtp_packet->payload, payload_size, nalu_buf, offset);
       break;
   }
   return 0;
@@ -323,6 +324,12 @@ void rtp_decoder_init(RtpDecoder* rtp_decoder, MediaCodec codec, RtpOnPacket on_
 
   switch (codec) {
     case CODEC_H264:
+      rtp_decoder->nalu_buf = malloc(CONFIG_MAX_NALU_SIZE);
+      if (rtp_decoder->nalu_buf == NULL) {
+        LOGE("malloc() for NALU buffer failed");
+        break;
+      }
+      rtp_decoder->nalu_offset = 0;
       rtp_decoder->decode_func = rtp_decode_h264;
       break;
     case CODEC_PCMA:
@@ -332,6 +339,12 @@ void rtp_decoder_init(RtpDecoder* rtp_decoder, MediaCodec codec, RtpOnPacket on_
     default:
       break;
   }
+}
+
+void rtp_decoder_deinit(RtpDecoder* rtp_decoder) {
+  free(rtp_decoder->nalu_buf);
+  rtp_decoder->nalu_buf = NULL;
+  rtp_decoder->decode_func = NULL;
 }
 
 int rtp_decoder_decode(RtpDecoder* rtp_decoder, const uint8_t* buf, size_t size) {
